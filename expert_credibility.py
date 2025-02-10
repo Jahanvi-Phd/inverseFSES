@@ -7,7 +7,7 @@ import os
 np.random.seed(42)
 
 # Load Data
-file_path = r"D:\PhD\python\IFSES_python\drug200.csv"
+file_path = r".\drug_data.csv"
 data = pd.read_csv(file_path)
 
 # Sets

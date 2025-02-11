@@ -17,7 +17,10 @@ M = ['p', 'q', 'r']
 O = [0, 1]
 
 # Weights
-weights = {'e1': 0.15, 'e2': 0.35, 'e3': 0.35, 'e4': 0.15}
+weights = {'e1': 0.20, 'e2': 0.30, 'e3': 0.30, 'e4': 0.20}
+
+# Expert credibility (optional improvement)
+expert_credibility = {'p': 0.9, 'q': 0.8, 'r': 0.7}
 
 # Fuzzification Functions
 def fuzzify_age(age): return round(np.clip(age / 100, 0.2, 1.0), 2)

@@ -59,18 +59,7 @@ def to_dataframe(ifses):
 agree_df = to_dataframe(agree_IFSES)
 disagree_df = to_dataframe(disagree_IFSES)
 
-# Step 1: Save IFSES with timestamp
-agree_df.to_excel(f"{output_folder}/Agree_IFSES_{timestamp}.xlsx", index=False)
-disagree_df.to_excel(f"{output_folder}/Disagree_IFSES_{timestamp}.xlsx", index=False)
-
-# Step 2: Normalization
-# def old_normalize(df):
-#     norm_df = df.copy()
-#     print(norm_df)
-#     for col in ['e1', 'e2', 'e3', 'e4']:
-#         norm_df[col] = df[col] / np.sqrt((df[col] ** 2).sum())
-#     return norm_df
-
+# Normalization
 def row_normalize(df):
     norm_df = df.copy()
     for index, row in df.iterrows():
@@ -78,30 +67,24 @@ def row_normalize(df):
         norm_df.loc[index, ['e1', 'e2', 'e3', 'e4']] = row[['e1', 'e2', 'e3', 'e4']] / row_sum_squares
     return norm_df
 
-agree_norm = row_normalize(agree_df)
-disagree_norm = row_normalize(disagree_df)
-agree_norm.to_excel(f"{output_folder}/Agree_Normalized_{timestamp}.xlsx", index=False)
-disagree_norm.to_excel(f"{output_folder}/Disagree_Normalized_{timestamp}.xlsx", index=False)
-
 # Step 3: Weighted Aggregation
 def weighted_sum(df):
     weight_series = pd.Series(weights, index=['e1', 'e2', 'e3', 'e4'])
     return df[['e1', 'e2', 'e3', 'e4']].dot(weight_series)
 
-agree_norm['Weighted_Sum'] = weighted_sum(agree_norm)
-disagree_norm['Weighted_Sum'] = weighted_sum(disagree_norm)
-agree_norm.to_excel(f"{output_folder}/Agree_Weighted_{timestamp}.xlsx", index=False)
-disagree_norm.to_excel(f"{output_folder}/Disagree_Weighted_{timestamp}.xlsx", index=False)
+agree_normalised_weighted = row_normalize(agree_df)
+disagree_normalised_weighted = row_normalize(disagree_df)
+agree_normalised_weighted['Weighted_Sum'] = weighted_sum(agree_normalised_weighted)
+disagree_normalised_weighted['Weighted_Sum'] = weighted_sum(disagree_normalised_weighted)
 
 # Step 4: Net Score Calculation
 net_scores = pd.DataFrame({
-    'Drug-Expert': agree_norm['Drug-Expert'],
-    'Agree_Sum': agree_norm['Weighted_Sum'],
-    'Disagree_Sum': disagree_norm['Weighted_Sum'],
+    'Drug-Expert': agree_normalised_weighted['Drug-Expert'],
+    'Agree_Sum': agree_normalised_weighted['Weighted_Sum'],
+    'Disagree_Sum': disagree_normalised_weighted['Weighted_Sum'],
 })
 net_scores['Net_Score'] = net_scores['Agree_Sum'] - net_scores['Disagree_Sum']
 net_scores.sort_values(by='Net_Score', ascending=False, inplace=True)
-net_scores.to_excel(f"{output_folder}/Drug_Ranking_{timestamp}.xlsx", index=False)
 
 # Determine the best drug
 best_drug = net_scores.iloc[0]
@@ -119,10 +102,10 @@ weight_variations = {
     'BP-Focus': {'e1': 0.20, 'e2': 0.40, 'e3': 0.20, 'e4': 0.20}
 }
 
-def plot_sensitivity(agree_norm, disagree_norm, weights, ax, title):
+def plot_sensitivity(agree_normalised_weighted, disagree_normalised_weighted, weights, ax, title):
     # Calculate weighted sums
-    agree_weighted = agree_norm[['e1', 'e2', 'e3', 'e4']].dot(pd.Series(weights))
-    disagree_weighted = disagree_norm[['e1', 'e2', 'e3', 'e4']].dot(pd.Series(weights))
+    agree_weighted = agree_normalised_weighted[['e1', 'e2', 'e3', 'e4']].dot(pd.Series(weights))
+    disagree_weighted = disagree_normalised_weighted[['e1', 'e2', 'e3', 'e4']].dot(pd.Series(weights))
     
     # Calculate net scores
     net_scores = agree_weighted - disagree_weighted
@@ -133,13 +116,22 @@ def plot_sensitivity(agree_norm, disagree_norm, weights, ax, title):
     ax.set_title(title)
     ax.set_xlabel('Drug-Expert Combinations')
     ax.set_ylabel('Net Score')
+
     ax.grid(True)
 
 # Plot each variation
-plot_sensitivity(agree_norm, disagree_norm, weight_variations['Original'], ax1, 'Original Weights')
-plot_sensitivity(agree_norm, disagree_norm, weight_variations['Equal'], ax2, 'Equal Weights')
-plot_sensitivity(agree_norm, disagree_norm, weight_variations['Age-Focus'], ax3, 'Age-Focused Weights')
-plot_sensitivity(agree_norm, disagree_norm, weight_variations['BP-Focus'], ax4, 'BP-Focused Weights')
+plot_sensitivity(agree_normalised_weighted, disagree_normalised_weighted, weight_variations['Original'], ax1, 'Original Weights')
+plot_sensitivity(agree_normalised_weighted, disagree_normalised_weighted, weight_variations['Equal'], ax2, 'Equal Weights')
+plot_sensitivity(agree_normalised_weighted, disagree_normalised_weighted, weight_variations['Age-Focus'], ax3, 'Age-Focused Weights')
+plot_sensitivity(agree_normalised_weighted, disagree_normalised_weighted, weight_variations['BP-Focus'], ax4, 'BP-Focused Weights')
+
+# Save all DataFrames to a single Excel file
+with pd.ExcelWriter(f"{output_folder}/IFSES_Output_{timestamp}.xlsx") as writer:
+    agree_df.to_excel(writer, sheet_name='Agree_IFSES', index=False)
+    disagree_df.to_excel(writer, sheet_name='Disagree_IFSES', index=False)
+    agree_normalised_weighted.to_excel(writer, sheet_name='Agree_Weighted', index=False)
+    disagree_normalised_weighted.to_excel(writer, sheet_name='Disagree_Weighted', index=False)
+    net_scores.to_excel(writer, sheet_name='Drug_Ranking', index=False)
 
 # Adjust layout
 plt.tight_layout()

@@ -143,5 +143,5 @@ plot_sensitivity(agree_norm, disagree_norm, weight_variations['BP-Focus'], ax4, 
 
 # Adjust layout
 plt.tight_layout()
-plt.savefig(f'sensitivity_analysis_combined{timestamp}.png', dpi=300, bbox_inches='tight')
+plt.savefig(f'{output_folder}/sensitivity_analysis_combined_{timestamp}.png', dpi=300, bbox_inches='tight')
 plt.show()

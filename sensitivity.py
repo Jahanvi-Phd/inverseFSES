@@ -3,7 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 import os
+import sys
 import matplotlib.pyplot as plt
+from collections import Counter
 
 #Current timestamp
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -34,12 +36,17 @@ def fuzzify_cholesterol(ch): return {'NORMAL': 0.8, 'HIGH': 0.2}.get(ch, 0.5)
 
 # IFSES Construction
 IFSES = []
-for _, row in data.iterrows():
+#setting equal number o f0 and 1 i.e 100 each
+opinions = [0] * 100 + [1] * 100
+np.random.shuffle(opinions)
+
+
+for i, row in data.iterrows():
     drug = row['Drug']
     params = (fuzzify_age(row['Age']), fuzzify_bp(row['BP']), 
               fuzzify_cholesterol(row['Cholesterol']), fuzzify_na_to_k(row['Na_to_K']))
     expert = np.random.choice(M)
-    opinion = np.random.choice(O)
+    opinion = opinions[i]
     IFSES.append((drug, params, expert, opinion))
 
 # Split Agree and Disagree Sets
@@ -90,9 +97,6 @@ net_scores.sort_values(by='Net_Score', ascending=False, inplace=True)
 best_drug = net_scores.iloc[0]
 print(f"The best drug is: {best_drug['Drug-Expert']} with a net score of {best_drug['Net_Score']}")
 
-# Create a figure with multiple subplots
-fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
-fig.suptitle('Sensitivity Analysis for Different Weight Combinations', fontsize=16)
 
 # Weight variations
 weight_variations = {
@@ -116,9 +120,11 @@ def plot_sensitivity(agree_normalised_weighted, disagree_normalised_weighted, we
     ax.set_title(title)
     ax.set_xlabel('Drug-Expert Combinations')
     ax.set_ylabel('Net Score')
-
     ax.grid(True)
 
+# Create a figure with multiple subplots
+fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(12, 9))
+fig.suptitle('Sensitivity Analysis for Different Weight Combinations', fontsize=15)
 # Plot each variation
 plot_sensitivity(agree_normalised_weighted, disagree_normalised_weighted, weight_variations['Original'], ax1, 'Original Weights')
 plot_sensitivity(agree_normalised_weighted, disagree_normalised_weighted, weight_variations['Equal'], ax2, 'Equal Weights')
@@ -136,4 +142,28 @@ with pd.ExcelWriter(f"{output_folder}/IFSES_Output_{timestamp}.xlsx") as writer:
 # Adjust layout
 plt.tight_layout()
 plt.savefig(f'{output_folder}/sensitivity_analysis_combined_{timestamp}.png', dpi=300, bbox_inches='tight')
+plt.show()
+
+# Add this function to plot all variations together
+def plot_combined_sensitivity(agree_normalised_weighted, disagree_normalised_weighted, weight_variations, ax):
+    colors = ['b', 'g', 'r', 'c']
+    labels = ['Original', 'Equal', 'Age-Focus', 'BP-Focus']
+    for i, (key, weights) in enumerate(weight_variations.items()):
+        agree_weighted = agree_normalised_weighted[['e1', 'e2', 'e3', 'e4']].dot(pd.Series(weights))
+        disagree_weighted = disagree_normalised_weighted[['e1', 'e2', 'e3', 'e4']].dot(pd.Series(weights))
+        net_scores = agree_weighted - disagree_weighted
+        sorted_scores = sorted(net_scores, reverse=True)
+        ax.plot(range(len(sorted_scores)), sorted_scores, marker='o', color=colors[i], label=labels[i])
+    
+    ax.set_title('Combined Sensitivity Analysis')
+    ax.set_xlabel('Drug-Expert Combinations')
+    ax.set_ylabel('Net Score')
+    ax.grid(True)
+    ax.legend()
+
+# Create a new figure for the combined plot
+fig, ax = plt.subplots(figsize=(12, 9))
+plot_combined_sensitivity(agree_normalised_weighted, disagree_normalised_weighted, weight_variations, ax)
+plt.tight_layout()
+plt.savefig(f'{output_folder}/sensitivity_analysis_combined_all_{timestamp}.png', dpi=300, bbox_inches='tight')
 plt.show()

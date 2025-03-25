@@ -9,7 +9,7 @@ from collections import Counter
 
 #Current timestamp
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-output_folder = f"test_output/output_{timestamp}"
+output_folder = f"test_output/sensitivity_output_{timestamp}"
 os.makedirs(output_folder, exist_ok=True)
 # Set random seed for reproducibility
 np.random.seed(42)

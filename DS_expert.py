@@ -9,7 +9,7 @@ np.random.seed(42)
 
 # Current timestamp
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-output_folder = "test_output"
+output_folder = f"test_output/DS_expert_output_{timestamp}"
 os.makedirs(output_folder, exist_ok=True)
 
 # Load Data

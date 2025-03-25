@@ -9,6 +9,9 @@ np.random.seed(42)
 # Load Data
 file_path = r".\drug_data.csv"
 data = pd.read_csv(file_path)
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+output_folder = f"test_output/main_og_output_{timestamp}"
+os.makedirs(output_folder, exist_ok=True)
 
 # Sets
 U = list(data['Drug'].unique())
@@ -54,8 +57,8 @@ disagree_df = to_dataframe(disagree_IFSES)
 
 # Step 1: Save IFSES with timestamp
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-agree_df.to_excel(f"Agree_IFSES_{timestamp}.xlsx", index=False)
-disagree_df.to_excel(f"Disagree_IFSES_{timestamp}.xlsx", index=False)
+agree_df.to_excel(f"{output_folder}/Agree_IFSES_{timestamp}.xlsx", index=False)
+disagree_df.to_excel(f"{output_folder}/Disagree_IFSES_{timestamp}.xlsx", index=False)
 
 # Step 2: Normalization
 def normalize(df):
@@ -66,8 +69,8 @@ def normalize(df):
 
 agree_norm = normalize(agree_df)
 disagree_norm = normalize(disagree_df)
-agree_norm.to_excel(f"Agree_Normalized_{timestamp}.xlsx", index=False)
-disagree_norm.to_excel(f"Disagree_Normalized_{timestamp}.xlsx", index=False)
+agree_norm.to_excel(f"{output_folder}/Agree_Normalized_{timestamp}.xlsx", index=False)
+disagree_norm.to_excel(f"{output_folder}/Disagree_Normalized_{timestamp}.xlsx", index=False)
 
 # Step 3: Weighted Aggregation
 def weighted_sum(df):
@@ -76,8 +79,8 @@ def weighted_sum(df):
 
 agree_norm['Weighted_Sum'] = weighted_sum(agree_norm)
 disagree_norm['Weighted_Sum'] = weighted_sum(disagree_norm)
-agree_norm.to_excel(f"Agree_Weighted_{timestamp}.xlsx", index=False)
-disagree_norm.to_excel(f"Disagree_Weighted_{timestamp}.xlsx", index=False)
+agree_norm.to_excel(f"{output_folder}/Agree_Weighted_{timestamp}.xlsx", index=False)
+disagree_norm.to_excel(f"{output_folder}/Disagree_Weighted_{timestamp}.xlsx", index=False)
 
 # Step 4: Net Score Calculation
 net_scores = pd.DataFrame({
@@ -87,7 +90,7 @@ net_scores = pd.DataFrame({
 })
 net_scores['Net_Score'] = net_scores['Agree_Sum'] - net_scores['Disagree_Sum']
 net_scores.sort_values(by='Net_Score', ascending=False, inplace=True)
-net_scores.to_excel(f"Drug_Ranking_{timestamp}.xlsx", index=False)
+net_scores.to_excel(f"{output_folder}/Drug_Ranking_{timestamp}.xlsx", index=False)
 
 # Determine the best drug
 best_drug = net_scores.iloc[0]
